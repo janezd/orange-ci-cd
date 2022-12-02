@@ -2,6 +2,9 @@ name: Automatic Rebase
 
 on:
   workflow_call:
+    secrets:
+      BIOLAB_HELPER_PAT:
+        required: true
   issue_comment:
     types: [created]
 
