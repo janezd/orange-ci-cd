@@ -71,6 +71,12 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           echo "QT_QPA_PLATFORM=offscreen" >> $GITHUB_ENV
+          
+      - name: Set Ubuntu eviroment variables
+        # on Ubuntu QTWEBENGINE_CHROMIUM_FLAGS needs to be set for webview to work 
+        if: runner.os == 'Linux'
+        run: |
+          echo "QTWEBENGINE_CHROMIUM_FLAGS=--disable-gpu --no-sandbox" >> $GITHUB_ENV
 
       - name: Test with Tox
         run: |
