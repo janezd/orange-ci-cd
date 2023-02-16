@@ -20,37 +20,45 @@ jobs:
         os: [ubuntu-latest, macOS-latest, windows-latest]
         python-version: ['3.9']
         tox_env: [orange-released]
+        pyqt: ['5.15.*', '6.4.*']
         experimental: [false]
         include:
           - os: windows-latest
             python-version: '3.8'
             tox_env: orange-oldest
+            pyqt: '5.15.*'
             experimental: false
           - os: macOS-latest
             python-version: '3.8'
             tox_env: orange-oldest
+            pyqt: '5.15.*'
             experimental: false
           - os: ubuntu-latest
             python-version: '3.8'
             tox_env: orange-oldest
+            pyqt: '5.15.*'
             experimental: false
 
           - os: windows-latest
             python-version: '3.10'
             tox_env: orange-latest
+            pyqt: '5.15.*'
             experimental: false
           - os: macOS-latest
             python-version: '3.10'
             tox_env: orange-latest
+            pyqt: '5.15.*'
             experimental: false
           - os: ubuntu-latest
             python-version: '3.10'
             tox_env: orange-latest
+            pyqt: '5.15.*'
             experimental: false
 
           - os: ubuntu-latest
             python-version: '3.11.0'
             tox_env: orange-latest
+            pyqt: '5.15.*'
             experimental: true
 
     steps:
@@ -83,10 +91,10 @@ jobs:
           tox -e ${{ matrix.tox_env }}
         env:
           # Set pyqt and webengine versions.
-          PYQT_PYPI_NAME: PyQt5
-          PYQT_PYPI_VERSION: 5.15.*
-          WEBENGINE_PYPI_NAME: PyQtWebEngine
-          WEBENGINE_PYPI_VERSION: 5.15.*
+          PYQT_PYPI_NAME: "${{ startsWith(matrix.pyqt, '5')  && 'PyQt5' || 'PyQt6' }}"
+          PYQT_PYPI_VERSION: ${{ matrix.pyqt }}
+          WEBENGINE_PYPI_NAME: "${{ startsWith(matrix.pyqt, '5')  && 'PyQtWebEngine' || 'PyQt6-WebEngine' }}"
+          WEBENGINE_PYPI_VERSION: ${{ matrix.pyqt }}
 
           # Raise deprecations as errors in our tests only when testing orange-oldest and orange-released.
           ORANGE_DEPRECATIONS_ERROR: "${{ matrix.tox_env != 'orange-latest' && '1' || '' }}"
