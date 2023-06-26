@@ -70,7 +70,7 @@ jobs:
 
       - name: Install linux system dependencies
         # PyQt6 need special system dependencies on Ubuntu
-        if: runner.os == 'Linux' && startsWith(matrix.pyqt, '6')
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libegl1-mesa libxcb-shape0 libxcb-cursor0
