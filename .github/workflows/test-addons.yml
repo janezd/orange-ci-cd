@@ -18,48 +18,42 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macOS-latest, windows-latest]
-        python-version: ['3.9']
+        python-version: ['3.10']
         tox_env: [orange-released]
         pyqt: ['5.15.*', '6.5.*']
         experimental: [false]
         include:
           - os: windows-latest
-            python-version: '3.8'
+            python-version: '3.9'
             tox_env: orange-oldest
             pyqt: '5.15.*'
             experimental: false
           - os: macOS-latest
-            python-version: '3.8'
+            python-version: '3.9'
             tox_env: orange-oldest
             pyqt: '5.15.*'
             experimental: false
           - os: ubuntu-latest
-            python-version: '3.8'
+            python-version: '3.9'
             tox_env: orange-oldest
             pyqt: '5.15.*'
             experimental: false
 
           - os: windows-latest
-            python-version: '3.10'
+            python-version: '3.11'
             tox_env: orange-latest
             pyqt: '5.15.*'
             experimental: false
           - os: macOS-latest
-            python-version: '3.10'
+            python-version: '3.11'
             tox_env: orange-latest
             pyqt: '5.15.*'
             experimental: false
           - os: ubuntu-latest
-            python-version: '3.10'
+            python-version: '3.11'
             tox_env: orange-latest
             pyqt: '5.15.*'
             experimental: false
-
-          - os: ubuntu-latest
-            python-version: '3.11.0'
-            tox_env: orange-latest
-            pyqt: '5.15.*'
-            experimental: true
 
     steps:
       - uses: actions/checkout@v3
@@ -117,7 +111,7 @@ jobs:
 
       - name: Upload code coverage
         if: |
-          matrix.python-version == '3.9' &&
+          matrix.python-version == '3.10' &&
           matrix.os == 'ubuntu-latest' &&
           matrix.tox_env == 'orange-released'
         run: |
