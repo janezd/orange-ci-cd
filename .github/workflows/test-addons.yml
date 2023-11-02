@@ -20,7 +20,7 @@ jobs:
         os: [ubuntu-latest, macOS-latest, windows-latest]
         python-version: ['3.10']
         tox_env: [orange-released]
-        pyqt: ['5.15.*', '6.5.*']
+        pyqt: ['5.15.*', '6.6.*']
         experimental: [false]
         include:
           - os: windows-latest
