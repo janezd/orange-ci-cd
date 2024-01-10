@@ -2,18 +2,9 @@ name: Test
 
 on:
   workflow_call:
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.experimental }}
-    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -54,66 +45,10 @@ jobs:
             tox_env: orange-latest
             pyqt: '5.15.*'
             experimental: false
-
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install linux system dependencies
-        # PyQt6 need special system dependencies on Ubuntu
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libegl1-mesa libxcb-shape0 libxcb-cursor0 glibc-tools
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install --upgrade tox
-
-      - name: Test with Tox at Ubuntu
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          catchsegv xvfb-run -a -s "$XVFBARGS" tox -e ${{ matrix.tox_env }}
-        env:
-          # Set pyqt and webengine versions.
-          PYQT_PYPI_NAME: "${{ startsWith(matrix.pyqt, '5')  && 'PyQt5' || 'PyQt6' }}"
-          PYQT_PYPI_VERSION: ${{ matrix.pyqt }}
-          WEBENGINE_PYPI_NAME: "${{ startsWith(matrix.pyqt, '5')  && 'PyQtWebEngine' || 'PyQt6-WebEngine' }}"
-          WEBENGINE_PYPI_VERSION: ${{ matrix.pyqt }}
-
-          # Need this otherwise unittest installs a warning filter that overrides
-          # our desire to have OrangeDeprecationWarnings raised
-          PYTHONWARNINGS: module
-          # for xvfb at Ubuntu
-          XVFBARGS: "-screen 0 1280x1024x24"
-          # on Ubuntu QTWEBENGINE_CHROMIUM_FLAGS needs to be set for webview to work 
-          QTWEBENGINE_CHROMIUM_FLAGS: "--disable-gpu --no-sandbox"
-
-      - name: Test with Tox at other systems
-        if: matrix.os != 'ubuntu-latest'
-        run: tox -e ${{ matrix.tox_env }}
-        env:
-          # Set pyqt and webengine versions.
-          PYQT_PYPI_NAME: "${{ startsWith(matrix.pyqt, '5')  && 'PyQt5' || 'PyQt6' }}"
-          PYQT_PYPI_VERSION: ${{ matrix.pyqt }}
-          WEBENGINE_PYPI_NAME: "${{ startsWith(matrix.pyqt, '5')  && 'PyQtWebEngine' || 'PyQt6-WebEngine' }}"
-          WEBENGINE_PYPI_VERSION: ${{ matrix.pyqt }}
-
-          # Raise deprecations as errors in our tests only when testing orange-oldest and orange-released.
-          ORANGE_DEPRECATIONS_ERROR: "${{ matrix.tox_env != 'orange-latest' && '1' || '' }}"
-          # Need this otherwise unittest installs a warning filter that overrides
-          # our desire to have OrangeDeprecationWarnings raised
-          PYTHONWARNINGS: module
-
-      - name: Upload code coverage
-        if: |
-          matrix.python-version == '3.10' &&
-          matrix.os == 'ubuntu-latest' &&
-          matrix.tox_env == 'orange-released'
-        run: |
-          pip install codecov
-          codecov
+    uses: ./.github/workflows/test-job.yml
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
+      tox_env: ${{ matrix.tox_env }}
+      pyqt: ${{ matrix.pyqt }}
+      experimental: ${{ matrix.experimental }}
