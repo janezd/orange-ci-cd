@@ -1,0 +1,153 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      pure-python:
+        description: Flag that tell whether workflow build pure-Python wheel or platform dependent wheels.
+        required: true
+        type: boolean
+
+jobs:
+  build_dist_files:
+    # Build soruce distribution and wheel if package is pure python
+    name: Build distribution files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tool
+        run: python -m pip install build
+
+      - name: Build sdist
+        run: python -m build --sdist .
+
+      - name: Build wheel
+        if: ${{ inputs.pure-python }}
+        run: |
+          python -m pip install ".[doc]" pyqt5  # some packages (e.g. text) need to be installed for doc build
+          cd doc && make html && cd ..
+          python -m build --wheel .
+
+      - name: Upload dist files
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-sdist
+          path: dist/*
+
+  generate-wheels-matrix:
+    # Create a matrix of all architectures & versions to build.
+    # This enables the next step to run cibuildwheel in parallel.
+    # From https://iscinumpy.dev/post/cibuildwheel-2-10-0/#only-210
+    name: Generate wheels matrix
+    runs-on: ubuntu-latest
+    if: ${{ !inputs.pure-python }}
+    outputs:
+      include: ${{ steps.set-matrix.outputs.include }}
+    env:
+      # remove 3.12 constraint when Orange builds wheels for Python 3.12
+      CIBW_PROJECT_REQUIRES_PYTHON: ">=3.9,<3.12"
+      # support musllinux when Orange supports it
+      CIBW_SKIP: "pp* *-musllinux_*"  
+      CIBW_ARCHS_LINUX: "x86_64 aarch64"
+      CIBW_ARCHS_MACOS: "x86_64 arm64"
+      CIBW_ARCHS_WINDOWS: AMD64
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cibuildwheel
+        # Nb. keep cibuildwheel version pin consistent with job below
+        run: pipx install cibuildwheel==2.16.5
+      - id: set-matrix
+        run: |
+          MATRIX=$(
+            {
+              cibuildwheel --print-build-identifiers --platform linux \
+              | jq -nRc '{"only": inputs, "os": "ubuntu-latest"}' \
+              && cibuildwheel --print-build-identifiers --platform macos \
+              | jq -nRc '{"only": inputs, "os": "macos-latest"}' \
+              && cibuildwheel --print-build-identifiers --platform windows \
+              | jq -nRc '{"only": inputs, "os": "windows-latest"}'
+            } | jq -sc
+          )
+          echo "include=$MATRIX" >> $GITHUB_OUTPUT
+
+  build_wheels:
+    # Build wheel if package is not pure python
+    name: Build wheels on ${{ matrix.only }}
+    needs: generate-wheels-matrix
+    runs-on: ${{ matrix.os }}
+    if: ${{ !inputs.pure-python }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-wheels-matrix.outputs.include) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: all
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.16.5
+        with:
+          only: ${{ matrix.only }}
+        env:
+          CIBW_BEFORE_BUILD: >
+            pip install ".[doc]" &&
+            cd doc && make html && cd ..
+
+      - uses: actions/upload-artifact@v4
+        with:
+          path: ./wheelhouse/*.whl
+          name: dist-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+
+  upload_release_assets:
+    name:  Upload Release Assets
+    needs: [build_dist_files, build_wheels]
+    # run eventhough job in need is skipped
+    if: always() && !failure() && !cancelled() && startsWith(github.ref, 'refs/tags')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          # unpacks all dist artifacts into dist/
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+
+      - name: Upload to release
+        uses: shogo82148/actions-upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ${{ steps.download_artifact.outputs.download-path }}/*.whl
+
+  pypi_publish:
+    name: PyPI Publish
+    needs: [build_dist_files, build_wheels]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # this permission is mandatory for trusted publishing
+    # run eventhough job in need is skipped
+    if: always() && !failure() && !cancelled() && startsWith(github.ref, 'refs/tags')
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          # unpacks all dist artifacts into dist/
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
+
+      - name: Publish packages to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages_dir: dist/
