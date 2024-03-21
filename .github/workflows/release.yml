@@ -103,6 +103,7 @@ jobs:
         with:
           only: ${{ matrix.only }}
         env:
+          CIBW_BUILD_VERBOSITY: 1
           CIBW_BEFORE_BUILD: >
             pip install ".[doc]" &&
             cd doc && make html && cd ..
