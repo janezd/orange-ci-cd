@@ -54,7 +54,7 @@ jobs:
           then
               echo "### Missing or obsolete translations" >> $GITHUB_STEP_SUMMARY
               echo "::error::Missing or obsolete translations"
-              echo "If you wish to fix this, see i18n/README.md"
+              echo "Run 'trubar collect -s ${{ inputs.package-dir }} i18n/si/msgs.jaml' and update translations"
               exit 1
           else
               echo "### All translations are up to date" >> $GITHUB_STEP_SUMMARY
